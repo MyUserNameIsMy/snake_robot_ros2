@@ -1,0 +1,41 @@
+services:
+  cpu:
+    image: moveit/moveit2:${DOCKER_IMAGE}
+    container_name: moveit2_container
+    privileged: true
+    network_mode: host
+    command: /bin/bash
+    working_dir: /root/ws_moveit
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - $XAUTHORITY:/root/.Xauthority
+      - ./ros2-moveit-snake:/root/ws_moveit/src
+    environment:
+      QT_X11_NO_MITSHM: 1
+      DISPLAY: $DISPLAY
+
+  gpu:
+    image: moveit/moveit2:${DOCKER_IMAGE}
+    container_name: moveit2_container
+    privileged: true
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+    network_mode: host
+    command: /bin/bash
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    working_dir: /root/ws_moveit
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - $XAUTHORITY:/root/.Xauthority
+      - ./ros2-moveit-snake:/root/ws_moveit/src
+    environment:
+      QT_X11_NO_MITSHM: 1
+      DISPLAY: $DISPLAY
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
