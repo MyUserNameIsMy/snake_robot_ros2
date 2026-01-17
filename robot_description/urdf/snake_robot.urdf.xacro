@@ -1,0 +1,176 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="snake_robot">
+
+  <xacro:property name="link_length" value="0.59" />
+  <xacro:property name="joint_offset_x" value="0.12" />
+  <xacro:property name="joint_offset_z" value="-0.178" />
+
+  <xacro:macro name="default_inertial" params="mass">
+    <inertial>
+      <mass value="${mass}" />
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01" />
+    </inertial>
+  </xacro:macro>
+
+  <link name="world"/>
+
+  <joint name="base_to_world" type="fixed">
+    <parent link="world"/>
+    <child link="base_link"/>
+  </joint>
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 -0.05" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://robot_description/meshes/base.stl" />
+      </geometry>
+      <material name="grey">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.05" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://robot_description/meshes/base.stl" />
+      </geometry>
+    </collision>
+    <xacro:default_inertial mass="1.0"/>
+  </link>
+
+  <joint name="base_motor_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="motor_0"/>
+    <origin xyz="0.267 0 0.23"/>
+  </joint>
+
+  <link name="motor_0">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 3.14"/>
+      <geometry>
+        <mesh filename="package://robot_description/meshes/motor.stl"/>
+      </geometry>
+      <material name="gold">
+        <color rgba="0.8 0.8 0.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 3.14"/>
+      <geometry>
+        <mesh filename="package://robot_description/meshes/motor.stl"/>
+      </geometry>
+    </collision>
+    <xacro:default_inertial mass="0.5"/>
+  </link>
+  <xacro:macro name="snake_segment" params="i prev limit_l limit_u">
+
+    <joint name="joint_${i}" type="revolute">
+      <parent link="motor_${prev}"/>
+      <child link="bracket_${i}"/>
+      <origin xyz="${joint_offset_x} 0 ${joint_offset_z}" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/> <limit effort="100.0" lower="${limit_l}" upper="${limit_u}" velocity="1.0"/>
+    </joint>
+
+    <link name="bracket_${i}">
+      <visual>
+        <geometry>
+          <mesh filename="package://robot_description/meshes/joint_connector.stl"/>
+        </geometry>
+        <material name="green">
+           <color rgba="0.0 0.8 0.0 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="package://robot_description/meshes/joint_connector.stl"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="0.2"/>
+    </link>
+
+    <joint name="connection_${i}" type="fixed">
+      <parent link="bracket_${i}"/>
+      <child link="motor_${i}"/>
+      <origin xyz="${link_length} 0 0.17" rpy="0 0 0"/>
+    </joint>
+
+    <link name="motor_${i}">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 3.14"/>
+        <geometry>
+          <mesh filename="package://robot_description/meshes/motor.stl"/>
+        </geometry>
+        <material name="gold"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 3.14"/>
+        <geometry>
+          <mesh filename="package://robot_description/meshes/motor.stl"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+
+  </xacro:macro>
+
+  <xacro:snake_segment i="1" prev="0" limit_l="-2.0" limit_u="2.0" />
+  <xacro:snake_segment i="2" prev="1" limit_l="-2.0" limit_u="2.0" />
+  <xacro:snake_segment i="3" prev="2" limit_l="-2.0" limit_u="2.0" />
+  <xacro:snake_segment i="4" prev="3" limit_l="-2.0" limit_u="2.0" />
+
+  <joint name="joint_5" type="revolute">
+    <parent link="motor_4"/>
+    <child link="end_effector"/>
+    <origin xyz="${joint_offset_x} -0.01 ${joint_offset_z}" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="100.0" lower="-2.0" upper="2.0" velocity="1.0"/>
+  </joint>
+
+  <link name="end_effector">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 3.14"/>
+      <geometry>
+         <mesh filename="package://robot_description/meshes/end_effector.stl"/>
+      </geometry>
+      <material name="grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 3.14"/>
+      <geometry>
+         <mesh filename="package://robot_description/meshes/end_effector.stl"/>
+      </geometry>
+    </collision>
+    <xacro:default_inertial mass="0.1"/>
+  </link>
+
+  <ros2_control name="SnakeRobotFakeSystem" type="system">
+    <hardware>
+      <plugin>mock_components/GenericSystem</plugin>
+    </hardware>
+    <joint name="joint_1">
+      <command_interface name="position"/>
+      <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="joint_2">
+      <command_interface name="position"/>
+      <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="joint_3">
+      <command_interface name="position"/>
+      <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="joint_4">
+      <command_interface name="position"/>
+      <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="joint_5">
+      <command_interface name="position"/>
+      <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+  </ros2_control>
+</robot>
