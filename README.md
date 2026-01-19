@@ -83,7 +83,13 @@ This phase establishes the "bridge" between ROS 2 software and the physical MX-2
 
 ### Step 1: Launch & Enter Container
 ```bash
-DOCKER_IMAGE=humble-tutorial docker compose run --entrypoint /bin/bash moveit_gpu
+DOCKER_IMAGE=humble-humble-tutorial-source docker compose run cpu
+```
+
+Once inside the container, it is recommended to update the package list and install a text editor like Vim:
+```bash
+sudo apt update
+sudo apt install vim
 ```
 
 ### Step 2: Install Dynamixel SDK (Python)
@@ -135,18 +141,162 @@ You need to import your robot description package (containing URDF and meshes) i
    3. Scroll down and select **RobotModel**.
    ![Add Robot Model](./snake_rviz_first_step_robot_model.png)
    4. In the left panel, expand **RobotModel** and set the **Description Topic** to `/robot_description`.
-   ![Set Description Topic](./snake_rviz_first_step_description.png)
+   ![Set Description Topic](./snake_rviz_first_step_description_topic.png)
 
 ## 3️⃣ Phase 3: MoveIt2 Configuration (Simulation)
 Use the Setup Assistant to generate the robot's motion planning parameters.
 
-1. **Launch Assistant:** `ros2 launch moveit_setup_assistant setup_assistant.launch.py`
-2. **Define Planning Group:** Create a group named `snake_arm` using the `joint_chain` (Joint 1 to Joint 5).
-3. **Define Poses:** Add the Home, Right, and Left poses previously calibrated.
-4. **Test Simulation:**
-
+### Step 1: Launch Setup Assistant
 ```bash
-ros2 launch snake_moveit_config demo.launch.py
+ros2 launch moveit_setup_assistant setup_assistant.launch.py
+```
+
+### Step 2: Load Robot Model
+1. Click **Create New MoveIt Configuration Package**.
+2. Select the `snake_robot.urdf.xacro` file.
+   ![Load URDF](./moveit2_step_1.png)
+3. Click **Load Files**. You should see "Success".
+   ![Success](./moveit_2_step_1_success.png)
+
+### Step 3: Self-Collisions
+1. Click **Self-Collisions** on the left.
+2. Click **Generate Collision Matrix**.
+   ![Generate Collision](./moveit2_step_2.png)
+
+### Step 4: Virtual Joints
+1. Click **Virtual Joints**.
+2. Add a virtual joint to attach the robot to the world (if needed, usually `world` to `base_link`).
+   ![Virtual Joint](./moveit2_step_3.png)
+
+### Step 5: Planning Groups
+1. Click **Planning Groups**.
+2. Click **Add Group**.
+   - **Group Name:** `snake_arm`
+   - **Kinematic Solver:** `kdl_kinematics_plugin/KDLKinematicsPlugin`
+3. Click **Add Kin. Chain**.
+   - **Base Link:** `base_link`
+   - **Tip Link:** `end_effector`
+   ![Planning Group](./moveit2_step_4.png)
+
+### Step 6: Robot Poses
+1. Click **Robot Poses**.
+2. Add predefined poses (e.g., Home, Up, Right).
+   ![Add Poses](./moveit2_step_5.png)
+   ![All Poses](./moveit2_step_5_all.png)
+
+### Step 7: End Effectors & Passive Joints
+1. **End Effectors:** No changes needed.
+   ![End Effectors](./moveit2_step_6.png)
+2. **Passive Joints:** No changes needed.
+   ![Passive Joints](./moveit2_step_7.png)
+
+### Step 8: ROS 2 Control
+1. Click **ROS 2 Control**.
+2. Click **Add Interface** (or Auto Detect).
+   ![ROS 2 Control](./moveit2_step_8.png)
+
+### Step 9: Controllers
+1. **ROS 2 Controllers:** Generate the controllers.
+   ![ROS 2 Controllers](./moveit2_step_9.png)
+2. **MoveIt Controllers:** Generate MoveIt controllers.
+   ![MoveIt Controllers](./moveit2_step_10.png)
+
+### Step 10: Perception & Launch Files
+1. **Perception:** No changes.
+   ![Perception](./moveit2_step_11.png)
+2. **Launch Files:** No changes.
+   ![Launch Files](./moveit2_step_12.png)
+
+### Step 11: Author Information
+1. Click **Author Information**.
+2. Enter your name and email.
+   ![Author Info](./moveit2_step_13.png)
+
+### Step 12: Generate Package
+1. Click **Configuration Files**.
+2. Set the output directory (e.g., `~/ws_moveit/src/snake_moveit_config`).
+3. Click **Generate Package**.
+   ![Generate Package](./moveit2_step_14.png)
+   ![Success](./moveit2_step_14_success.png)
+
+### Step 13: Build and Test
+1. Build the new package:
+   ```bash
+   colcon build --packages-select snake_moveit_config
+   source install/setup.bash
+   ```
+2. Run the demo:
+   ```bash
+   ros2 launch snake_moveit_config demo.launch.py
+   ```
+
+### ⚠️ Troubleshooting
+If you encounter an error like this:
+![Error](./moveit2_test_1.png)
+
+You may need to manually update the configuration files.
+
+**1. Fix `joint_limits.yaml`**
+Edit `~/ws_moveit/src/snake_moveit_config/config/joint_limits.yaml`:
+```yaml
+# joint_limits.yaml allows the dynamics properties specified in the URDF to be overwritten or augmented as needed
+
+# For beginners, we downscale velocity and acceleration limits.
+# You can always specify higher scaling factors (<= 1.0) in your motion requests.  # Increase the values below to 1.0 to always move at maximum speed.
+default_velocity_scaling_factor: 0.1
+default_acceleration_scaling_factor: 0.1
+
+# Specific joint properties can be changed with the keys [max_position, min_position, max_velocity, max_acceleration]
+# Joint limits can be turned off with [has_velocity_limits, has_acceleration_limits]
+joint_limits:
+  joint_1:
+    has_velocity_limits: true
+    max_velocity: 1.0
+    has_acceleration_limits: true
+    max_acceleration: 1.0
+  joint_2:
+    has_velocity_limits: true
+    max_velocity: 1.0
+    has_acceleration_limits: true
+    max_acceleration: 1.0
+  joint_3:
+    has_velocity_limits: true
+    max_velocity: 1.0
+    has_acceleration_limits: true
+    max_acceleration: 1.0
+  joint_4:
+    has_velocity_limits: true
+    max_velocity: 1.0
+    has_acceleration_limits: true
+    max_acceleration: 1.0
+  joint_5:
+    has_velocity_limits: true
+    max_velocity: 1.0
+    has_acceleration_limits: true
+    max_acceleration: 1.0
+```
+
+**2. Fix `moveit_controllers.yaml`**
+Edit `~/ws_moveit/src/snake_moveit_config/config/moveit_controllers.yaml`:
+```yaml
+# MoveIt uses this configuration to know which controller to talk to
+moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControllerManager
+
+moveit_simple_controller_manager:
+  controller_names:
+    - snake_arm_controller
+
+  snake_arm_controller:
+    # This must match the action namespace of your controller
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: true
+    joints:
+      - joint_1
+      - joint_2
+      - joint_3
+      - joint_4
+      - joint_5
 ```
 
 ## 4️⃣ Phase 4: Real Robot Control (The Bridge)
