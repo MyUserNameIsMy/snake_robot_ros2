@@ -16,7 +16,6 @@ This project provides a complete ROS 2 Humble environment for simulating and con
 
 1. **Windows Setup:**
    - Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) with WSL2 backend enabled.
-   - Install [NVIDIA Drivers](https://www.nvidia.com/Download/index.aspx) on the Windows host.
    - Install [usbipd-win](https://github.com/dorssel/usbipd-win) for real hardware USB passthrough.
 
 2. **WSL2 Permissions:**
@@ -33,7 +32,7 @@ You will install Docker inside WSL2 Ubuntu rather than using Docker Desktop to e
 Follow the [official Ubuntu Docker installation guide](https://docs.docker.com/engine/install/ubuntu/).
 
 ### Step 2: Create Docker Compose Configuration
-Place the following `docker-compose.yml` in `~/ros2-snake/`. This configures GPU passthrough and volumes for your workspace.
+Place the following `docker-compose.yml` in `~/ros2-moveit-snake/`. This configures GPU passthrough and volumes for your workspace.
 
 ```yaml
 services:
@@ -97,17 +96,46 @@ cd DynamixelSDK/python
 sudo python3 setup.py install
 ```
 
-### Step 3: Build the Workspace
-```bash
-cd /root/ws_moveit
-# Source MoveIt tutorial environment
-source /opt/ros/humble/setup.bash
-source /workspace/install/setup.bash
+### Step 3: Setup Robot Description and Build
+You need to import your robot description package (containing URDF and meshes) into the workspace before building.
 
-# Build robot description and config
-colcon build --symlink-install
-source install/setup.bash
-```
+1. **Clone Robot Description:**
+   Navigate to the `src` directory and copy robot_description folder from 
+   snake_robot_ros2 tutorial. This ensures 
+   your URDF and meshes are available for MoveIt.
+
+2. **Build the Workspace:**
+   ```bash
+   cd /root/ws_moveit
+   
+   # Source ROS 2 environment
+   source /opt/ros/humble/setup.bash
+
+   # Build the workspace
+   colcon build --symlink-install
+   source install/setup.bash
+   ```
+
+   **Verify the Build:**
+   To check if everything was imported correctly, run the following command from `~/ws_moveit`:
+   ```bash
+   ros2 launch robot_description display.launch.py
+   ```
+   
+   If successful, you should see the robot model in RViz:
+   ![Success](./snake_rviz_first_step.png)
+
+   ### ⚠️ Troubleshooting RViz
+   If you see an error like the image below (no robot model visible):
+   ![Error](./snake_rviz_first_step_error.png)
+
+   **Solution:**
+   1. Change the **Fixed Frame** to `world`.
+   2. Click the **Add** button in the bottom left.
+   3. Scroll down and select **RobotModel**.
+   ![Add Robot Model](./snake_rviz_first_step_robot_model.png)
+   4. In the left panel, expand **RobotModel** and set the **Description Topic** to `/robot_description`.
+   ![Set Description Topic](./snake_rviz_first_step_description.png)
 
 ## 3️⃣ Phase 3: MoveIt2 Configuration (Simulation)
 Use the Setup Assistant to generate the robot's motion planning parameters.
